@@ -100,7 +100,7 @@ type Context interface {
 
 	Forward(...Tensor) Context
 	Compute(...Tensor)
-	MaxTensors() int
+	MaxGraphNodes() int
 	Close()
 }
 
