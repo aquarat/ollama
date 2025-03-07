@@ -163,24 +163,24 @@ func (s *Scheduler) processPending(ctx context.Context) {
 						gpus = s.getCpuFn()
 					} else {
 						gpus = s.getGpuFn()
-                        slog.Debug("RPC options", "options", pending.opts.RPCServers)
-                        // Removing Existing Servers
-                        if pending.opts.RPCServers != "" {
-                            slog.Debug("removing system RPC servers", "gpus", gpus)
-                            // Removing RPC Servers from system
-                            for _, rpcServer := range gpus {
-                                if rpcServer.Library == "rpc" {
-                                    gpus = gpus[1:]
-                                }
-                            }
-                            slog.Debug("adding request RPC servers", "gpus", gpus)
-                            // Adding RPC Servers from request
-                            newServers := gpu.CheckRPCServers(pending.opts.RPCServers)
-                            for _, rpcServer := range newServers {
-                                gpus = append(gpu.GpuInfoList{rpcServer.GpuInfo}, gpus...)
-                            }
-                            slog.Debug("new gpus", "gpus", gpus)
-                        }
+						slog.Debug("RPC options", "options", pending.opts.RPCServers)
+						// Removing Existing Servers
+						if pending.opts.RPCServers != "" {
+							slog.Debug("removing system RPC servers", "gpus", gpus)
+							// Removing RPC Servers from system
+							for _, rpcServer := range gpus {
+								if rpcServer.Library == "rpc" {
+									gpus = gpus[1:]
+								}
+							}
+							slog.Debug("adding request RPC servers", "gpus", gpus)
+							// Adding RPC Servers from request
+							newServers := discover.CheckRPCServers(pending.opts.RPCServers)
+							for _, rpcServer := range newServers {
+								gpus = append(discover.GpuInfoList{rpcServer.GpuInfo}, gpus...)
+							}
+							slog.Debug("new gpus", "gpus", gpus)
+						}
 					}
 
 					if envconfig.MaxRunners() <= 0 {
