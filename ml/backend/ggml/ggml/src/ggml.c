@@ -565,9 +565,9 @@ FILE * ggml_fopen(const char * fname, const char * mode) {
 #endif
 
 }
-static void ggml_vec_dot_f32(int n, float * restrict s, size_t bs, const float * restrict x, size_t bx, const float * restrict y, size_t by, int nrc);
-static void ggml_vec_dot_f16(int n, float * restrict s, size_t bs, ggml_fp16_t * restrict x, size_t bx, ggml_fp16_t * restrict y, size_t by, int nrc);
-static void ggml_vec_dot_bf16(int n, float * restrict s, size_t bs, ggml_bf16_t * restrict x, size_t bx, ggml_bf16_t * restrict y, size_t by, int nrc);
+static void ggml_vec_dot_f32(int n, float * GGML_RESTRICT s, size_t bs, const float * GGML_RESTRICT x, size_t bx, const float * GGML_RESTRICT y, size_t by, int nrc);
+static void ggml_vec_dot_f16(int n, float * GGML_RESTRICT s, size_t bs, ggml_fp16_t * GGML_RESTRICT x, size_t bx, ggml_fp16_t * GGML_RESTRICT y, size_t by, int nrc);
+static void ggml_vec_dot_bf16(int n, float * GGML_RESTRICT s, size_t bs, ggml_bf16_t * GGML_RESTRICT x, size_t bx, ggml_bf16_t * GGML_RESTRICT y, size_t by, int nrc);
 
 static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] = {
     [GGML_TYPE_I8] = {
@@ -962,7 +962,6 @@ static const char * GGML_OP_NAME[GGML_OP_COUNT] = {
     "UPSCALE",
     "PAD",
     "PAD_REFLECT_1D",
-    "UNPAD",
     "ARANGE",
     "TIMESTEP_EMBEDDING",
     "ARGSORT",
@@ -997,7 +996,7 @@ static const char * GGML_OP_NAME[GGML_OP_COUNT] = {
     "OPT_STEP_ADAMW",
 };
 
-static_assert(GGML_OP_COUNT == 84, "GGML_OP_COUNT != 84");
+static_assert(GGML_OP_COUNT == 83, "GGML_OP_COUNT != 83");
 
 static const char * GGML_OP_SYMBOL[GGML_OP_COUNT] = {
     "none",
@@ -1060,7 +1059,6 @@ static const char * GGML_OP_SYMBOL[GGML_OP_COUNT] = {
     "upscale(x)",
     "pad(x)",
     "pad_reflect_1d(x)",
-    "unpad(x)",
     "arange(start, stop, step)",
     "timestep_embedding(timesteps, dim, max_period)",
     "argsort(x)",
@@ -1095,7 +1093,7 @@ static const char * GGML_OP_SYMBOL[GGML_OP_COUNT] = {
     "adamw(x)",
 };
 
-static_assert(GGML_OP_COUNT == 84, "GGML_OP_COUNT != 84");
+static_assert(GGML_OP_COUNT == 83, "GGML_OP_COUNT != 83");
 
 static_assert(GGML_OP_POOL_COUNT == 2, "GGML_OP_POOL_COUNT != 2");
 
@@ -2334,6 +2332,7 @@ struct ggml_tensor * ggml_concat(
     struct ggml_tensor  * b,
     int                   dim) {
     GGML_ASSERT(dim >= 0 && dim < GGML_MAX_DIMS);
+    GGML_ASSERT(a->type == b->type);
 
     int64_t ne[GGML_MAX_DIMS];
     for (int d = 0; d < GGML_MAX_DIMS; ++d) {
@@ -4222,25 +4221,6 @@ struct ggml_tensor * ggml_pad_reflect_1d(
     ggml_set_op_params(result, params, sizeof(params));
 
     result->op     = GGML_OP_PAD_REFLECT_1D;
-    result->src[0] = a;
-
-    return result;
-}
-
-// ggml_unpad
-
-struct ggml_tensor * ggml_unpad(
-    struct ggml_context * ctx,
-    struct ggml_tensor  * a,
-    int p0, int p1, int p2, int p3) {
-
-    struct ggml_tensor * result = ggml_new_tensor_4d(ctx, a->type,
-            a->ne[0] - p0,
-            a->ne[1] - p1,
-            a->ne[2] - p2,
-            a->ne[3] - p3);
-
-    result->op = GGML_OP_UNPAD;
     result->src[0] = a;
 
     return result;

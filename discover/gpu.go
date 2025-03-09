@@ -46,11 +46,6 @@ const (
 	// TODO OneAPI minimum memory
 )
 
-// RPCServerMemory checks and total and free memory in bytes of a given RPC
-// endpoint.
-//
-// If the RPC endpoint given is unavailble (unable to connect), the total and
-// free memory returned would be 0.
 func RPCServerMemory(endpoint string) RPCServerMemoryResult {
 	// Setting timeout to 5 seconds
 	var deadLine time.Time
@@ -120,7 +115,6 @@ func RPCServerMemory(endpoint string) RPCServerMemoryResult {
 	}
 }
 
-// Find valid RPC servers from a comma seperated list of endpoints.
 func CheckRPCServers(endpoints string) RPCServerInfoList {
 	slog.Debug("finding valid rpc servers", "endpoints", endpoints)
 	rpcServersList := strings.Split(endpoints, ",")

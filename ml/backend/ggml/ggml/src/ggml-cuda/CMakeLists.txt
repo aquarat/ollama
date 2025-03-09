@@ -57,10 +57,6 @@ if (CUDAToolkit_FOUND)
         add_compile_definitions(GGML_CUDA_USE_GRAPHS)
     endif()
 
-    if(GGML_RPC)
-        add_compile_definitions(GGML_RPC)
-    endif()
-
     if (GGML_CUDA_FORCE_MMQ)
         add_compile_definitions(GGML_CUDA_FORCE_MMQ)
     endif()
@@ -105,6 +101,15 @@ if (CUDAToolkit_FOUND)
     set(CUDA_CXX_FLAGS "")
 
     set(CUDA_FLAGS -use_fast_math)
+
+    if (CUDAToolkit_VERSION VERSION_GREATER_EQUAL "12.8")
+        # Options are:
+        # - none (not recommended)
+        # - speed (nvcc's default)
+        # - balance
+        # - size
+        list(APPEND CUDA_FLAGS -compress-mode=${GGML_CUDA_COMPRESSION_MODE})
+    endif()
 
     if (GGML_FATAL_WARNINGS)
         list(APPEND CUDA_FLAGS -Werror all-warnings)
