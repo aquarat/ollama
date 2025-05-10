@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"syscall"
@@ -1169,6 +1170,7 @@ func (s *Server) GenerateRoutes(rc *ollama.Registry) (http.Handler, error) {
 	corsConfig.AllowOrigins = envconfig.AllowedOrigins()
 
 	r := gin.Default()
+	r.HandleMethodNotAllowed = true
 	r.Use(
 		cors.New(corsConfig),
 		allowedHostsMiddleware(s.addr),
@@ -1339,31 +1341,29 @@ func Serve(ln net.Listener) error {
 
 func waitForStream(c *gin.Context, ch chan any) {
 	c.Header("Content-Type", "application/json")
+	var latest api.ProgressResponse
 	for resp := range ch {
 		switch r := resp.(type) {
 		case api.ProgressResponse:
-			if r.Status == "success" {
-				c.JSON(http.StatusOK, r)
-				return
-			}
+			latest = r
 		case gin.H:
 			status, ok := r["status"].(int)
 			if !ok {
 				status = http.StatusInternalServerError
 			}
-			if errorMsg, ok := r["error"].(string); ok {
-				c.JSON(status, gin.H{"error": errorMsg})
-				return
-			} else {
-				c.JSON(status, gin.H{"error": "unexpected error format in progress response"})
-				return
+			errorMsg, ok := r["error"].(string)
+			if !ok {
+				errorMsg = "unknown error"
 			}
+			c.JSON(status, gin.H{"error": errorMsg})
+			return
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "unexpected progress response"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "unknown message type"})
 			return
 		}
 	}
-	c.JSON(http.StatusInternalServerError, gin.H{"error": "unexpected end of progress response"})
+
+	c.JSON(http.StatusOK, latest)
 }
 
 func streamResponse(c *gin.Context, ch chan any) {
@@ -1512,6 +1512,7 @@ func (s *Server) ChatHandler(c *gin.Context) {
 	if req.Messages[0].Role != "system" && m.System != "" {
 		msgs = append([]api.Message{{Role: "system", Content: m.System}}, msgs...)
 	}
+	msgs = filterThinkTags(msgs, m)
 
 	prompt, images, err := chatPrompt(c.Request.Context(), m, r.Tokenize, opts, msgs, req.Tools)
 	if err != nil {
@@ -1639,4 +1640,24 @@ func handleScheduleError(c *gin.Context, name string, err error) {
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
+}
+
+var thinkTagRegexp = regexp.MustCompile(`<think>(?s).*?</think>(\n)*`)
+
+func filterThinkTags(msgs []api.Message, m *Model) []api.Message {
+	if m.Config.ModelFamily == "qwen3" || model.ParseName(m.Name).Model == "deepseek-r1" {
+		finalUserIndex := -1
+		for i, msg := range msgs {
+			if msg.Role == "user" {
+				finalUserIndex = i
+			}
+		}
+
+		for i, msg := range msgs {
+			if msg.Role == "assistant" && i < finalUserIndex {
+				msgs[i].Content = thinkTagRegexp.ReplaceAllString(msg.Content, "")
+			}
+		}
+	}
+	return msgs
 }
