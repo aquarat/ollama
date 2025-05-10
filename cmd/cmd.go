@@ -1435,6 +1435,21 @@ func NewCLI() *cobra.Command {
 		}
 	}
 
+	// Create the RPC server command
+	rpcServerCmd := &cobra.Command{
+		Use:     "rpc-server",
+		Short:   "Start an RPC server for distributed inferencing",
+		Args:    cobra.ExactArgs(0),
+		RunE:    RunRPCServer,
+	}
+
+	rpcServerCmd.Flags().StringP("host", "H", "127.0.0.1", "Host to bind to")
+	rpcServerCmd.Flags().IntP("port", "p", 50052, "Port to bind to")
+	rpcServerCmd.Flags().StringP("mem", "m", "", "Backend memory size (in MB)")
+
+	// Add environment variable documentation for the RPC server command
+	appendEnvDocs(rpcServerCmd, envs)
+
 	rootCmd.AddCommand(
 		serveCmd,
 		createCmd,
@@ -1447,6 +1462,7 @@ func NewCLI() *cobra.Command {
 		psCmd,
 		copyCmd,
 		deleteCmd,
+		rpcServerCmd,
 		runnerCmd,
 	)
 
