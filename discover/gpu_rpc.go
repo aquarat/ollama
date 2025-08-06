@@ -147,7 +147,7 @@ func GetRPCServers(endpoints string) GpuInfoList {
 	for _, server := range rpcServersList {
 		// No servers given
 		if server == "" {
-			break
+			continue
 		}
 
 		// Getting information
